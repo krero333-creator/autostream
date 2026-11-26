@@ -1,10 +1,38 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const mineflayer = require('mineflayer');
+const { SocksClient } = require('socks');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const MC_HOST = 'eu.donutsmp.net';
+const MC_PORT = 25565;
 const MC_VERSION = process.env.MC_VERSION || false;
 const PAY_ALERT_CHANNEL_ID = '1575550075243987124';
+
+let proxyList = [];
+let proxyIndex = 0;
+
+async function fetchProxies() {
+  try {
+    const res = await fetch('https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5&timeout=5000&country=all');
+    const text = await res.text();
+    const list = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    if (list.length > 0) {
+      proxyList = list;
+      proxyIndex = 0;
+      console.log(`[Proxy] Loaded ${proxyList.length} SOCKS5 proxies`);
+    }
+  } catch (e) {
+    console.error('[Proxy] Failed to fetch:', e.message);
+  }
+}
+
+function getNextProxy() {
+  if (proxyList.length === 0) return null;
+  const p = proxyList[proxyIndex % proxyList.length];
+  proxyIndex++;
+  const [host, port] = p.split(':');
+  return { host, port: Number(port) };
+}
 
 const ACCOUNTS = {
   whats77: {
@@ -63,16 +91,36 @@ async function updateEmbed(accKey) {
   }
 }
 
-function startMcBot(accKey) {
+async function startMcBot(accKey) {
   const acc = ACCOUNTS[accKey];
   if (acc.bot) return;
+  acc.shouldReconnect = true;
+
+  if (proxyList.length === 0) await fetchProxies();
+  const proxy = getNextProxy();
 
   const bot = mineflayer.createBot({
     host: MC_HOST,
+    port: MC_PORT,
     username: acc.username,
     auth: 'microsoft',
     version: MC_VERSION,
     profilesFolder: `./auth_cache_${accKey}`,
+    connect: proxy
+      ? (client) => {
+          SocksClient.createConnection({
+            proxy: { host: proxy.host, port: proxy.port, type: 5 },
+            command: 'connect',
+            destination: { host: MC_HOST, port: MC_PORT },
+            timeout: 8000,
+          })
+            .then((info) => {
+              client.setSocket(info.socket);
+              client.emit('connect');
+            })
+            .catch((err) => client.emit('error', err));
+        }
+      : undefined,
     onMsaCode: async (data) => {
       try {
         const ch = await client.channels.fetch(acc.channelId);
@@ -116,6 +164,9 @@ function startMcBot(accKey) {
     acc.online = false;
     acc.bot = null;
     updateEmbed(accKey);
+    if (acc.shouldReconnect) {
+      setTimeout(() => startMcBot(accKey), 3000);
+    }
   });
 
   bot.on('kicked', async (reason) => {
@@ -168,6 +219,7 @@ client.on('interactionCreate', async (interaction) => {
   if (action === 'join') {
     startMcBot(accKey);
   } else if (action === 'leave') {
+    acc.shouldReconnect = false;
     if (acc.bot) {
       acc.bot.quit();
       acc.bot = null;
