@@ -18,6 +18,7 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_REFRESH_TOKEN_2: ${{ secrets.YT_REFRESH_TOKEN_2 }}
           BOT_MESSAGE: ${{ vars.BOT_MESSAGE || 'Всем привет!' }}
           BOT_INTERVAL_SEC: ${{ vars.BOT_INTERVAL_SEC || '120' }}
         run: python3 bot.py

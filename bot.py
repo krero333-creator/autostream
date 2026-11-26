@@ -7,16 +7,21 @@ import urllib.error
 
 CLIENT_ID = os.environ["YT_CLIENT_ID"]
 CLIENT_SECRET = os.environ["YT_CLIENT_SECRET"]
-REFRESH_TOKEN = os.environ["YT_REFRESH_TOKEN"]
+REFRESH_TOKENS = [
+    t for t in [
+        os.environ.get("YT_REFRESH_TOKEN", ""),
+        os.environ.get("YT_REFRESH_TOKEN_2", ""),
+    ] if t
+]
 PROMO_MESSAGE = os.environ.get("BOT_MESSAGE", "Всем привет! Подписывайтесь на канал!")
 INTERVAL_SEC = int(os.environ.get("BOT_INTERVAL_SEC", "120"))
 
 
-def get_access_token():
+def get_access_token(refresh_token):
     data = urllib.parse.urlencode({
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
-        "refresh_token": REFRESH_TOKEN,
+        "refresh_token": refresh_token,
         "grant_type": "refresh_token",
     }).encode()
     req = urllib.request.Request("https://oauth2.googleapis.com/token", data=data)
@@ -78,35 +83,38 @@ def send_message(token, chat_id, text):
 
 
 def main():
-    token = get_access_token()
-    token_time = time.time()
+    tokens = {rt: (get_access_token(rt), time.time()) for rt in REFRESH_TOKENS}
     page_tokens = {}
     last_promo = 0
 
     while True:
         try:
-            if time.time() - token_time > 3000:
-                token = get_access_token()
-                token_time = time.time()
+            all_chats = []
+            for rt in REFRESH_TOKENS:
+                token, token_time = tokens[rt]
+                if time.time() - token_time > 3000:
+                    token = get_access_token(rt)
+                    tokens[rt] = (token, time.time())
 
-            chats = get_active_chats(token)
-            for chat_id in chats:
-                pt = page_tokens.get(chat_id, "")
-                pt_param = f"&pageToken={urllib.parse.quote(pt)}" if pt else ""
-                res = yt_api(
-                    "GET",
-                    f"liveChat/messages?liveChatId={urllib.parse.quote(chat_id)}&part=snippet,authorDetails{pt_param}",
-                    token,
-                )
-                page_tokens[chat_id] = res.get("nextPageToken", "")
-
-                for msg in res.get("items", []):
-                    author = msg.get("authorDetails", {})
-                    if not author.get("isChatOwner", False):
-                        delete_message(token, msg["id"])
-
-            if time.time() - last_promo >= INTERVAL_SEC and chats:
+                chats = get_active_chats(token)
                 for chat_id in chats:
+                    all_chats.append((token, chat_id))
+                    pt = page_tokens.get(chat_id, "")
+                    pt_param = f"&pageToken={urllib.parse.quote(pt)}" if pt else ""
+                    res = yt_api(
+                        "GET",
+                        f"liveChat/messages?liveChatId={urllib.parse.quote(chat_id)}&part=snippet,authorDetails{pt_param}",
+                        token,
+                    )
+                    page_tokens[chat_id] = res.get("nextPageToken", "")
+
+                    for msg in res.get("items", []):
+                        author = msg.get("authorDetails", {})
+                        if not author.get("isChatOwner", False):
+                            delete_message(token, msg["id"])
+
+            if time.time() - last_promo >= INTERVAL_SEC and all_chats:
+                for token, chat_id in all_chats:
                     send_message(token, chat_id, PROMO_MESSAGE)
                 last_promo = time.time()
 
