@@ -169,20 +169,12 @@ async function startMcBot(accKey) {
     }
   });
 
-  bot.on('kicked', async (reason) => {
-    console.error(`[MC ${accKey}] Kicked:`, reason);
-    try {
-      const ch = await client.channels.fetch(acc.channelId);
-      if (ch) await ch.send(`⚠️ **${acc.username}** кикнуло: \`${String(reason).slice(0, 300)}\``);
-    } catch {}
+  bot.on('kicked', (reason) => {
+    console.error(`[MC ${accKey}] Kicked:`, JSON.stringify(reason));
   });
 
-  bot.on('error', async (err) => {
+  bot.on('error', (err) => {
     console.error(`[MC ${accKey}] Error:`, err.message);
-    try {
-      const ch = await client.channels.fetch(acc.channelId);
-      if (ch) await ch.send(`❌ **${acc.username}** ошибка: \`${err.message}\``);
-    } catch {}
   });
 }
 
