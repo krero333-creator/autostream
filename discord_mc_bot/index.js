@@ -3,7 +3,7 @@ const mineflayer = require('mineflayer');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const MC_HOST = 'eu.donutsmp.net';
-const MC_VERSION = process.env.MC_VERSION || '1.21.4';
+const MC_VERSION = process.env.MC_VERSION || false;
 const PAY_ALERT_CHANNEL_ID = '1575550075243987124';
 
 const ACCOUNTS = {
@@ -118,8 +118,20 @@ function startMcBot(accKey) {
     updateEmbed(accKey);
   });
 
-  bot.on('error', (err) => {
+  bot.on('kicked', async (reason) => {
+    console.error(`[MC ${accKey}] Kicked:`, reason);
+    try {
+      const ch = await client.channels.fetch(acc.channelId);
+      if (ch) await ch.send(`⚠️ **${acc.username}** кикнуло: \`${String(reason).slice(0, 300)}\``);
+    } catch {}
+  });
+
+  bot.on('error', async (err) => {
     console.error(`[MC ${accKey}] Error:`, err.message);
+    try {
+      const ch = await client.channels.fetch(acc.channelId);
+      if (ch) await ch.send(`❌ **${acc.username}** ошибка: \`${err.message}\``);
+    } catch {}
   });
 }
 
