@@ -1,0 +1,38 @@
+name: AutoStream Discord MC Bot 24/7
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */5 * * *'
+
+jobs:
+  mc-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore MC Auth Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            discord_mc_bot/auth_cache_whats77
+            discord_mc_bot/auth_cache_osikox
+          key: mc-auth-cache-${{ github.run_id }}
+          restore-keys: |
+            mc-auth-cache-
+
+      - name: Install dependencies
+        working-directory: discord_mc_bot
+        run: npm install
+
+      - name: Run Discord + MC Bot
+        working-directory: discord_mc_bot
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        run: node index.js
