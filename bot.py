@@ -63,6 +63,24 @@ def delete_message(token, message_id):
         print(f"[WARN] Failed to delete {message_id}: {e}")
 
 
+def ban_user(token, chat_id, channel_id):
+    try:
+        yt_api(
+            "POST",
+            "liveChat/bans?part=snippet",
+            token,
+            {
+                "snippet": {
+                    "liveChatId": chat_id,
+                    "type": "permanent",
+                    "bannedUserDetails": {"channelId": channel_id},
+                }
+            },
+        )
+    except Exception as e:
+        print(f"[WARN] Failed to ban {channel_id}: {e}")
+
+
 def send_message(token, chat_id, text):
     try:
         yt_api(
@@ -112,6 +130,9 @@ def main():
                         author = msg.get("authorDetails", {})
                         if not author.get("isChatOwner", False):
                             delete_message(token, msg["id"])
+                            ch_id = author.get("channelId")
+                            if ch_id:
+                                ban_user(token, chat_id, ch_id)
 
             if time.time() - last_promo >= INTERVAL_SEC and all_chats:
                 for token, chat_id in all_chats:
