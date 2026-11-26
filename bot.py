@@ -134,13 +134,8 @@ def main():
                             if ch_id:
                                 ban_user(token, chat_id, ch_id)
 
-            if time.time() - last_promo >= INTERVAL_SEC and all_chats:
-                for token, chat_id in all_chats:
-                    send_message(token, chat_id, PROMO_MESSAGE)
-                last_promo = time.time()
-
         except Exception as e:
-            print(f"[ERROR] {e}")
+            print(f"[ERROR] {e}", flush=True)
 
         time.sleep(5)
 
