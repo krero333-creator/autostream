@@ -138,6 +138,8 @@ def main():
                             if ch_id:
                                 ban_user(token, chat_id, ch_id)
 
+        except urllib.error.HTTPError as e:
+            print(f"[ERROR] HTTP {e.code}: {e.read().decode()}", flush=True)
         except Exception as e:
             print(f"[ERROR] {e}", flush=True)
 
