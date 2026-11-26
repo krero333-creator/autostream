@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const mineflayer = require('mineflayer');
 const { SocksClient } = require('socks');
+const fs = require('fs');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const MC_HOST = 'eu.donutsmp.net';
@@ -70,7 +71,8 @@ function buildEmbed(accKey) {
 function buildButtons(accKey) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`join_${accKey}`).setLabel('Зайти').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`leave_${accKey}`).setLabel('Выйти').setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId(`leave_${accKey}`).setLabel('Выйти').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`reset_${accKey}`).setLabel('Сбросить вход').setStyle(ButtonStyle.Secondary)
   );
 }
 
@@ -228,6 +230,15 @@ client.on('interactionCreate', async (interaction) => {
       acc.bot = null;
     }
     acc.online = false;
+    await updateEmbed(accKey);
+  } else if (action === 'reset') {
+    acc.shouldReconnect = false;
+    if (acc.bot) {
+      acc.bot.quit();
+      acc.bot = null;
+    }
+    acc.online = false;
+    fs.rmSync(`./auth_cache_${accKey}`, { recursive: true, force: true });
     await updateEmbed(accKey);
   }
 });
