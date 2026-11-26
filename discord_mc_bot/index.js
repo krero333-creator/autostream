@@ -118,7 +118,13 @@ async function startMcBot(accKey) {
               client.setSocket(info.socket);
               client.emit('connect');
             })
-            .catch((err) => client.emit('error', err));
+            .catch((err) => {
+              console.error(`[Proxy ${accKey}] Failed (${proxy.host}:${proxy.port}):`, err.message);
+              acc.bot = null;
+              if (acc.shouldReconnect) {
+                setTimeout(() => startMcBot(accKey), 1000);
+              }
+            });
         }
       : undefined,
     onMsaCode: async (data) => {
