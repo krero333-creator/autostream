@@ -117,6 +117,7 @@ def main():
                     tokens[rt] = (token, time.time())
 
                 chats = get_active_chats(token)
+                print(f"[DEBUG] Token {rt[:8]}... found {len(chats)} chats: {chats}", flush=True)
                 for chat_id in chats:
                     all_chats.append((token, chat_id))
                     pt = page_tokens.get(chat_id, "")
@@ -131,6 +132,7 @@ def main():
                     for msg in res.get("items", []):
                         author = msg.get("authorDetails", {})
                         if not author.get("isChatOwner", False):
+                            print(f"[BOT] Deleting & banning {author.get('displayName')}", flush=True)
                             delete_message(token, msg["id"])
                             ch_id = author.get("channelId")
                             if ch_id:
