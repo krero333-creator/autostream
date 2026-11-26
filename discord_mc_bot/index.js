@@ -97,7 +97,8 @@ async function startMcBot(accKey) {
   acc.shouldReconnect = true;
 
   if (proxyList.length === 0) await fetchProxies();
-  const proxy = getNextProxy();
+  const proxy = acc.workingProxy || getNextProxy();
+  acc.currentProxy = proxy;
 
   const bot = mineflayer.createBot({
     host: MC_HOST,
@@ -120,6 +121,7 @@ async function startMcBot(accKey) {
             })
             .catch((err) => {
               console.error(`[Proxy ${accKey}] Failed (${proxy.host}:${proxy.port}):`, err.message);
+              acc.workingProxy = null;
               acc.bot = null;
               if (acc.shouldReconnect) {
                 setTimeout(() => startMcBot(accKey), 1000);
@@ -143,6 +145,7 @@ async function startMcBot(accKey) {
 
   bot.on('login', () => {
     acc.online = true;
+    acc.workingProxy = acc.currentProxy;
     updateEmbed(accKey);
   });
 
@@ -177,10 +180,12 @@ async function startMcBot(accKey) {
 
   bot.on('kicked', (reason) => {
     console.error(`[MC ${accKey}] Kicked:`, JSON.stringify(reason));
+    acc.workingProxy = null;
   });
 
   bot.on('error', (err) => {
     console.error(`[MC ${accKey}] Error:`, err.message);
+    acc.workingProxy = null;
   });
 }
 
