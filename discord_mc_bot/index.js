@@ -73,6 +73,16 @@ function startMcBot(accKey) {
     auth: 'microsoft',
     version: MC_VERSION,
     profilesFolder: `./auth_cache_${accKey}`,
+    onMsaCode: async (data) => {
+      try {
+        const ch = await client.channels.fetch(acc.channelId);
+        if (ch) {
+          await ch.send(`🔐 **Авторизация ${acc.username}**: перейди на ${data.verification_uri} и введи код: \`${data.user_code}\``);
+        }
+      } catch (e) {
+        console.error('[MSA] Error:', e.message);
+      }
+    },
   });
 
   acc.bot = bot;
