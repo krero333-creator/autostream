@@ -1,0 +1,49 @@
+name: AutoStream 24/7
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */5 * * *' # Автоперезапуск каждые 5 часов
+
+jobs:
+  stream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350 # Максимум 5ч 50м на один запуск
+
+    steps:
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download Stream.mp4
+        run: |
+          curl -L -o Stream.mp4 "https://huggingface.co/datasets/dimanicotine/autostream-video/resolve/main/Stream.mp4"
+
+      - name: Start 24/7 Stream
+        env:
+          STREAM_KEY: ${{ secrets.STREAM_KEY }}
+          RTMP_BASE: ${{ vars.RTMP_BASE || 'rtmp://a.rtmp.youtube.com/live2/' }}
+        run: |
+          if [ -z "$STREAM_KEY" ]; then
+            echo "ОШИБКА: Добавь STREAM_KEY в Settings -> Secrets and variables -> Actions"
+            exit 1
+          fi
+          while true; do
+            ffmpeg \
+              -re \
+              -stream_loop -1 \
+              -i Stream.mp4 \
+              -vf "scale=1280:720" \
+              -c:v libx264 \
+              -preset veryfast \
+              -b:v 2500k \
+              -maxrate 2500k \
+              -bufsize 5000k \
+              -pix_fmt yuv420p \
+              -g 60 \
+              -c:a aac \
+              -b:a 128k \
+              -ar 44100 \
+              -f flv \
+              "${RTMP_BASE}${STREAM_KEY}" || true
+            sleep 5
+          done
