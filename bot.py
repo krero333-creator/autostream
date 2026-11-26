@@ -45,14 +45,16 @@ def yt_api(method, path, token, body=None):
 def get_active_chats(token):
     res = yt_api(
         "GET",
-        "liveBroadcasts?part=snippet&broadcastStatus=active&broadcastType=all",
+        "liveBroadcasts?part=snippet,status&mine=true&maxResults=10",
         token,
     )
     chats = []
     for item in res.get("items", []):
-        chat_id = item.get("snippet", {}).get("liveChatId")
-        if chat_id:
-            chats.append(chat_id)
+        lifecycle = item.get("status", {}).get("lifeCycleStatus", "")
+        if lifecycle in ("live", "testing", "liveStarting"):
+            chat_id = item.get("snippet", {}).get("liveChatId")
+            if chat_id:
+                chats.append(chat_id)
     return chats
 
 
