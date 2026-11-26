@@ -1,0 +1,23 @@
+name: AutoStream Chat Bot 24/7
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */5 * * *'
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run YouTube Chat Bot
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          BOT_MESSAGE: ${{ vars.BOT_MESSAGE || 'Всем привет!' }}
+          BOT_INTERVAL_SEC: ${{ vars.BOT_INTERVAL_SEC || '120' }}
+        run: python3 bot.py
